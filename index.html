@@ -62,6 +62,8 @@ main{padding:24px 28px 60px;max-width:1320px}
 .btn.sm{padding:5px 10px;font-size:12px;border-radius:7px}
 .btn.ghost{border-color:transparent;background:transparent;color:var(--mut)}
 .btn.danger{color:var(--red)}
+.btn.armed{background:#c2410c!important;border-color:#c2410c!important;color:#fff!important;animation:armPulse 1s ease-in-out infinite}
+@keyframes armPulse{50%{box-shadow:0 0 0 5px rgba(194,65,12,.25)}}
 .pill{display:inline-block;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap}
 .p-grn{background:var(--grnSoft);color:var(--grn)}.p-amb{background:var(--ambSoft);color:var(--amb)}.p-red{background:var(--redSoft);color:var(--red)}.p-blu{background:var(--bluSoft);color:var(--blu)}.p-gry{background:#eef1f0;color:#55635e}.p-vio{background:var(--vioSoft);color:var(--vio)}.p-pri{background:var(--priSoft);color:var(--pri)}
 .tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
@@ -1093,13 +1095,22 @@ function komCard(k){
   if(k.stage===4) info=`<div class="cair-box">✅ Sudah cair ${fmtD(k.d4)}</div>`;
   let act='';
   if(canAdmin()){
-    if(k.stage===1) act=`<button class="btn sm pri" onclick="komStep('${k.id}',2)">Kirim balasan berkas komisi</button>`;
+    if(k.stage===1) act=`<button class="btn sm pri" onclick="armClick(this,'k2-${k.id}','Klik sekali lagi untuk kirim berkas',()=>komStep('${k.id}',2))">Kirim balasan berkas komisi</button>`;
     if(k.stage===2) act=`<button class="btn sm pri" onclick="komVerif('${k.id}')">Verifikasi & jadwalkan cair</button>`;
-    if(k.stage===3) act=`<button class="btn sm" onclick="komVerif('${k.id}')">Ubah jadwal</button><button class="btn sm pri" onclick="komStep('${k.id}',4)">Tandai sudah cair</button>`;
+    if(k.stage===3) act=`<button class="btn sm" onclick="komVerif('${k.id}')">Ubah jadwal</button><button class="btn sm pri" onclick="armClick(this,'k4-${k.id}','Klik sekali lagi untuk tandai cair',()=>komStep('${k.id}',4))">Tandai sudah cair</button>`;
   }
   return `<div class="kom"><div class="row between wrap"><div class="row">${av(a,40)}<div><b>${esc(k.consumer)}</b> <span class="mut xs">· ${esc(k.cluster)} ${esc(k.tipe)} · Unit ${esc(k.unit)}</span><div class="xs mut">${esc(a.name)} — ${esc(agencyById(a.agency).name)}</div></div></div>
     <div style="text-align:right"><div class="b" style="font-size:17px">${rp(k.nominal)}</div><div class="xs mut">${k.pct}% × ${rpS(k.price)}</div></div></div>
     <div class="steps">${steps}</div>${info?`<div style="margin-top:12px">${info}</div>`:''}${act?`<div class="row wrap" style="margin-top:12px;justify-content:flex-end">${act}</div>`:''}</div>`;
+}
+/* aksi penting butuh dua kali klik: klik pertama = konfirmasi, klik kedua (dalam 4 detik) = jalankan */
+let ARM={key:null,until:0,t:null};
+function armClick(btn,key,msg,fn){
+  if(ARM.key===key && Date.now()<ARM.until){ clearTimeout(ARM.t); ARM.key=null; return fn(); }
+  document.querySelectorAll('.btn.armed').forEach(b=>{ b.classList.remove('armed'); b.textContent=b.dataset.label; });
+  clearTimeout(ARM.t); ARM={key,until:Date.now()+4000,t:null};
+  btn.dataset.label=btn.textContent; btn.textContent='⚠ '+msg; btn.classList.add('armed');
+  ARM.t=setTimeout(()=>{ if(btn.isConnected){ btn.classList.remove('armed'); btn.textContent=btn.dataset.label; } ARM.key=null; },4000);
 }
 function komStep(id,s){ const k=DB.komisi.find(x=>x.id===id); k.stage=s; k['d'+s]=TODAY_ISO; commit('komisi',k); render(); toast(s===2?'Berkas komisi dikirim ke agent':'Komisi ditandai cair'); }
 function komVerif(id){ const k=DB.komisi.find(x=>x.id===id);
